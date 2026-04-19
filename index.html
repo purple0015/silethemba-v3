@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SILETHEMBA // NEURAL_ARCHITECT</title>
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;500;700&family=Orbitron:wght@400;900&family=JetBrains+Mono:ital,wght@0,400;1,700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --black: #050505;
+    --green: #00FF41;
+    --green-dim: rgba(0, 255, 65, 0.15);
+    --pink: #FF007F;
+    --purple: #8A2BE2;
+    --cyan: #00FFFF;
+    --white: #F0F0F0;
+    --terminal-bg: rgba(10, 10, 15, 0.95);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--black);
+    color: var(--white);
+    font-family: 'Fira Code', monospace;
+    overflow-x: hidden;
+    cursor: crosshair;
+  }
+
+  /* ── SCANLINE OVERLAY ── */
+  body::before {
+    content: " ";
+    display: block;
+    position: fixed;
+    top: 0; left: 0; bottom: 0; right: 0;
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 118, 0.06));
+    z-index: 9999;
+    background-size: 100% 2px, 3px 100%;
+    pointer-events: none;
+  }
+
+  #matrixCanvas {
+    position: fixed; top: 0; left: 0;
+    z-index: 0; opacity: 0.4;
+  }
+
+  /* ── INTERACTIVE BOOT OVERLAY ── */
+  #boot-overlay {
+    position: fixed;
+    inset: 0;
+    background: var(--black);
+    z-index: 10000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    transition: opacity 1s ease;
+  }
+  .boot-btn {
+    background: transparent;
+    border: 1px solid var(--green);
+    color: var(--green);
+    padding: 20px 40px;
+    font-family: 'Orbitron', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 5px;
+    cursor: pointer;
+    box-shadow: 0 0 15px var(--green-dim);
+    transition: 0.3s;
+  }
+  .boot-btn:hover {
+    background: var(--green);
+    color: var(--black);
+    box-shadow: 0 0 30px var(--green);
+  }
+
+  /* ── NAVIGATION ── */
+  #terminal-nav {
+    position: fixed; top: 0; width: 100%; height: 45px;
+    background: var(--terminal-bg);
+    border-bottom: 1px solid var(--purple);
+    z-index: 500; display: flex; align-items: center; padding: 0 20px;
+    gap: 15px; font-size: 13px;
+  }
+  #nav-input {
+    background: transparent; border: none; color: var(--cyan);
+    outline: none; flex-grow: 1; font-family: 'JetBrains Mono';
+  }
+
+  /* ── HERO ── */
+  section { position: relative; z-index: 10; padding: 100px 5%; max-width: 1400px; margin: 0 auto; }
+  
+  .glitch-container { position: relative; }
+  .big-name {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(40px, 10vw, 120px);
+    font-weight: 900;
+    color: var(--white);
+    text-transform: uppercase;
+    line-height: 0.9;
+  }
+  .big-name span { color: var(--green); text-shadow: 0 0 20px var(--green); }
+
+  /* ── TECH STACK ── */
+  .grid-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 25px;
+    margin-top: 50px;
+  }
+  .card {
+    background: rgba(15, 15, 25, 0.8);
+    border: 1px solid rgba(138, 43, 226, 0.3);
+    padding: 30px;
+    position: relative;
+    transition: 0.4s;
+    overflow: hidden;
+  }
+  .card::after {
+    content: ""; position: absolute; top: -50%; left: -50%;
+    width: 200%; height: 200%;
+    background: linear-gradient(45deg, transparent, rgba(0, 255, 65, 0.05), transparent);
+    transform: rotate(45deg); transition: 0.6s;
+  }
+  .card:hover { border-color: var(--pink); transform: translateY(-5px); }
+  .card:hover::after { left: 100%; }
+
+  .skill-bar {
+    height: 4px; background: #222; margin-top: 15px; position: relative;
+  }
+  .skill-progress {
+    position: absolute; height: 100%; background: var(--cyan);
+    box-shadow: 0 0 10px var(--cyan);
+  }
+
+  /* ── SYSTEM MONITOR ── */
+  .monitor-panel {
+    border: 1px solid var(--green-dim);
+    background: rgba(0, 20, 0, 0.2);
+    padding: 20px;
+    font-family: 'JetBrains Mono';
+    font-size: 12px;
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 40px;
+  }
+  .stat-item { color: var(--green); }
+  .stat-val { color: var(--white); }
+
+  /* ── PROJECT WINDOWS ── */
+  .window-frame {
+    background: #000;
+    border: 1px solid #333;
+    border-radius: 8px 8px 0 0;
+    margin-bottom: 30px;
+  }
+  .window-header {
+    background: #1a1a1a;
+    padding: 10px 15px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .dot { width: 12px; height: 12px; border-radius: 50%; }
+  .red { background: #ff5f56; } .yellow { background: #ffbd2e; } .green { background: #27c93f; }
+  .window-content { padding: 25px; }
+
+  /* ── ANIMATIONS ── */
+  @keyframes pulse { 0% { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; } }
+  .pulse { animation: pulse 2s infinite; }
+
+  /* ── MOBILE OPTIMIZATION ── */
+  @media (max-width: 768px) {
+    .monitor-panel { flex-direction: column; gap: 10px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="boot-overlay">
+    <button class="boot-btn" onclick="initializeSystem()">Initialize_System.exe</button>
+    <p id="boot-status" style="margin-top: 20px; color: #555; font-size: 12px;">Awaiting user authentication...</p>
+</div>
+
+<canvas id="matrixCanvas"></canvas>
+
+<nav id="terminal-nav">
+  <span style="color: var(--pink)">guest@silethemba:~$</span>
+  <input id="nav-input" type="text" placeholder="type 'help'..." autocomplete="off">
+  <div id="sys-clock" style="color: var(--green)">00:00:00</div>
+</nav>
+
+<div class="site-wrapper">
+  <section id="hero">
+    <div class="monitor-panel">
+      <div class="stat-item">LATENCY: <span class="stat-val">12ms</span></div>
+      <div class="stat-item">CORE_TEMP: <span class="stat-val">42°C</span></div>
+      <div class="stat-item">NEURAL_LOAD: <span class="stat-val">88.4%</span></div>
+      <div class="stat-item">ENCRYPTION: <span class="stat-val">AES-256</span></div>
+    </div>
+
+    <div class="glitch-container">
+        <p style="color: var(--purple); letter-spacing: 10px;">// LEAD_DEVELOPER</p>
+        <h1 class="big-name" id="mainName">SILE<span>THEMBA</span></h1>
+        <p class="pulse" style="color: var(--cyan); margin-top: 10px;">> ARCHITECTING INTELLIGENT SYSTEMS</p>
+    </div>
+  </section>
+
+  <section id="stack">
+    <h2 style="font-family: 'Orbitron'; margin-bottom: 30px; color: var(--pink);">[01] TECHNOLOGY_STACK</h2>
+    <div class="grid-container">
+      <div class="card">
+        <h3 style="color: var(--green)">Python</h3>
+        <p style="font-size: 13px; color: #888;">AI/ML, PyTorch, FastAPI, Data Science.</p>
+        <div class="skill-bar"><div class="skill-progress" style="width: 95%"></div></div>
+      </div>
+      <div class="card">
+        <h3 style="color: var(--green)">Rust / C++</h3>
+        <p style="font-size: 13px; color: #888;">High-performance systems & WebAssembly.</p>
+        <div class="skill-bar"><div class="skill-progress" style="width: 75%; background: var(--pink); box-shadow: 0 0 10px var(--pink);"></div></div>
+      </div>
+      <div class="card">
+        <h3 style="color: var(--green)">Go (Golang)</h3>
+        <p style="font-size: 13px; color: #888;">Distributed microservices & Cloud infra.</p>
+        <div class="skill-bar"><div class="skill-progress" style="width: 82%; background: var(--purple); box-shadow: 0 0 10px var(--purple);"></div></div>
+      </div>
+      <div class="card">
+        <h3 style="color: var(--green)">PHP / Laravel</h3>
+        <p style="font-size: 13px; color: #888;">Enterprise SaaS & Scalable Backends.</p>
+        <div class="skill-bar"><div class="skill-progress" style="width: 88%"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="projects">
+    <h2 style="font-family: 'Orbitron'; margin-bottom: 30px; color: var(--pink);">[02] ACTIVE_OPERATIONS</h2>
+    
+    <div class="window-frame">
+        <div class="window-header">
+            <div class="dot red"></div><div class="dot yellow"></div><div class="dot green"></div>
+            <span style="font-size: 12px; color: #666; margin-left: 10px;">PRJ_SENTINEL.sys</span>
+        </div>
+        <div class="window-content">
+            <h3 style="color: var(--cyan)">AI Fraud Detection Engine</h3>
+            <p style="color: #aaa; margin: 15px 0;">A real-time anomaly detection system processing 10k+ transactions/sec using Isolation Forests and LSTM networks.</p>
+            <div style="display: flex; gap: 10px;">
+                <span style="border: 1px solid var(--green); padding: 2px 8px; font-size: 10px; color: var(--green);">KAFKA</span>
+                <span style="border: 1px solid var(--green); padding: 2px 8px; font-size: 10px; color: var(--green);">TENSORFLOW</span>
+                <span style="border: 1px solid var(--green); padding: 2px 8px; font-size: 10px; color: var(--green);">GO</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="window-frame">
+        <div class="window-header">
+            <div class="dot red"></div><div class="dot yellow"></div><div class="dot green"></div>
+            <span style="font-size: 12px; color: #666; margin-left: 10px;">PRJ_NEURAL_EDU.sys</span>
+        </div>
+        <div class="window-content">
+            <h3 style="color: var(--cyan)">Silethemba School Portal v3</h3>
+            <p style="color: #aaa; margin: 15px 0;">Automated grading and predictive dropout analysis integrated into a massive SaaS infrastructure.</p>
+            <div style="display: flex; gap: 10px;">
+                <span style="border: 1px solid var(--purple); padding: 2px 8px; font-size: 10px; color: var(--purple);">PHP 8.2</span>
+                <span style="border: 1px solid var(--purple); padding: 2px 8px; font-size: 10px; color: var(--purple);">PYTHON</span>
+                <span style="border: 1px solid var(--purple); padding: 2px 8px; font-size: 10px; color: var(--purple);">SCIKIT-LEARN</span>
+            </div>
+        </div>
+    </div>
+  </section>
+
+  <section>
+    <div style="background: #000; border: 1px solid var(--green); padding: 20px; font-family: 'JetBrains Mono'; height: 250px; overflow-y: auto;" id="terminal-body">
+        <div style="color: var(--green)">[SYSTEM] Initializing Neural Interface...</div>
+        <div style="color: var(--white)">> User Silethemba authorized.</div>
+        <div style="color: var(--white)">> Loading core modules... [SUCCESS]</div>
+        <div style="color: var(--white)">> Listening for incoming commands...</div>
+    </div>
+  </section>
+</div>
+
+<script>
+  // BOOT SEQUENCE
+  function initializeSystem() {
+    const btn = document.querySelector('.boot-btn');
+    const status = document.getElementById('boot-status');
+    btn.style.display = 'none';
+    
+    const lines = [
+      "Requesting access...",
+      "Bypassing firewall...",
+      "Decrypting visual assets...",
+      "Connection established.",
+      "WELCOME, OPERATOR."
+    ];
+    
+    let i = 0;
+    const interval = setInterval(() => {
+        status.textContent = lines[i];
+        status.style.color = "var(--green)";
+        i++;
+        if(i >= lines.length) {
+            clearInterval(interval);
+            document.getElementById('boot-overlay').style.opacity = '0';
+            setTimeout(() => {
+                document.getElementById('boot-overlay').style.display = 'none';
+            }, 1000);
+        }
+    }, 600);
+  }
+
+  // CLOCK
+  setInterval(() => {
+    document.getElementById('sys-clock').textContent = new Date().toLocaleTimeString();
+  }, 1000);
+
+  // MATRIX RAIN
+  const canvas = document.getElementById('matrixCanvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  const chars = "010101010101ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const drops = Array(Math.floor(canvas.width/20)).fill(1);
+
+  function drawMatrix() {
+    ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#0F0";
+    ctx.font = "15px monospace";
+    drops.forEach((y, i) => {
+      const text = chars[Math.floor(Math.random() * chars.length)];
+      ctx.fillText(text, i * 20, y * 20);
+      if (y * 20 > canvas.height && Math.random() > 0.975) drops[i] = 0;
+      drops[i]++;
+    });
+  }
+  setInterval(drawMatrix, 50);
+
+  // TERMINAL INPUT
+  const navInput = document.getElementById('nav-input');
+  const termBody = document.getElementById('terminal-body');
+
+  navInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        const cmd = navInput.value.toLowerCase();
+        const div = document.createElement('div');
+        div.style.color = "var(--cyan)";
+        div.textContent = `> ${cmd}`;
+        termBody.appendChild(div);
+        
+        const response = document.createElement('div');
+        response.style.color = "var(--white)";
+        
+        switch(cmd) {
+            case 'help': response.textContent = "Available: clear, status, about, contact, shutdown"; break;
+            case 'status': response.textContent = "All systems operational. Neural links stable."; break;
+            case 'clear': termBody.innerHTML = ''; break;
+            case 'about': response.textContent = "Silethemba: A lead systems architect focusing on AI/ML integration."; break;
+            default: response.textContent = `Unknown command: ${cmd}`;
+        }
+        
+        termBody.appendChild(response);
+        termBody.scrollTop = termBody.scrollHeight;
+        navInput.value = '';
+    }
+  });
+</script>
+</body>
+</html>
